@@ -6,7 +6,9 @@ SetRoundMineNum(x, y);
 DisplayLand(x, y, color);
 DisplayNum(x, y);
 DisplayAllMines();
+DrawCursor(x, y);
 TouchInput();
+CursorMoved(p);
 DigLand(p);
 //--------------global variables
 mapMode;//0:small[11*15], 1:big[24*32]
@@ -16,30 +18,46 @@ mineNum;
 leftNum;
 lands := {};
 dugMine;
+cursorPos;
+beginGame;
+endGame;
+beginTime;
+endTime;
 //{
 // 1:buried;[0:blank][1:buried a mine]
 // 2:num;   [number of the mines around]
 // 3:dug;   [0:not dug][1:dug]
 //}
-
 //--------------main
 export MineSweeper()
 begin
   Init();
   repeat
-    local t := TouchInput();
-    DigLand(t(1), t(2));
+    while CursorMoved(TouchInput()) do end;
+    DigLand(cursorPos(1), cursorPos(2));
   until dugMine or NOT leftNum;
+  endTime := ticks() - beginTime;
   if leftNum then
     DisplayAllMines();
+    freeze;
+    msgbox("You lost!");
+    //rect_p(G0, 110, 100, 210 - 1, 140 - 1, #000000h);
+    //textout_p("You lost!", G0, 115, 105, 7, #FF0000h);
+  else
+    wait(0.5);
+    msgbox("You won! Time used: " + string(endTime/1000, 0, 3) + "s");
+    //rect_p(G0, 100, 90, 220 - 1, 150 - 1, #000000h);
+    //textout_p("You won!", G0, 115, 90, 7, #FF00h);
+    //textout_p("Time: "+ string(endTime/1000, 0, 3), G0, 102, 120, 7, #FF00h);
   end;
-  wait(1);
 end;
 //Init
 Init()
 begin
   mapMode := 0;
   dugMine := 0;
+  beginGame := 1;
+  endGame := 0;
   while NOT choose(mapMode,"地图模式",{"小地图","大地图"})do end;
   mapMode := mapMode - 1;
   if mapMode = 0 then //small map
@@ -79,6 +97,8 @@ begin
     lands(yt, xt, 1) := 1;
     SetRoundMineNum(xt, yt);
   end;
+  cursorPos := {randint(1, xm), randint(1, ym)};
+  DrawCursor(cursorPos, #FF0000h);
 end;
 //SetRoundMineNum
 SetRoundMineNum(x, y)
@@ -154,6 +174,21 @@ begin
     end;
   end;
 end;
+//DrawCursor
+DrawCursor(p, color)
+begin
+  if mapMode then
+    line_p(G0, 10*p(1) - 11, 10*p(2) - 11, 10*p(1) - 1, 10*p(2) - 11, color);
+    line_p(G0, 10*p(1) - 11, 10*p(2) - 1, 10*p(1) - 1, 10*p(2) - 1, color);
+    line_p(G0, 10*p(1) - 11, 10*p(2) - 10, 10*p(1) - 11, 10*p(2) - 2, color);
+    line_p(G0, 10*p(1) - 1, 10*p(2) - 10, 10*p(1) - 1, 10*p(2) - 2, color);
+  else
+    line_p(G0, 21*p(1) - 19, 21*p(2) - 17, 21*p(1) + 2, 21*p(2) - 17, color);
+    line_p(G0, 21*p(1) - 19, 21*p(2) + 4, 21*p(1) + 2, 21*p(2) + 4, color);
+    line_p(G0, 21*p(1) - 19, 21*p(2) - 16, 21*p(1) - 19, 21*p(2) + 3, color);
+    line_p(G0, 21*p(1) + 2, 21*p(2) - 16, 21*p(1) + 2, 21*p(2) + 3, color);
+  end;
+end;
 //TouchInput
 TouchInput()
 begin
@@ -165,8 +200,36 @@ begin
     else
       touch := ceiling((touch - {3, 3})/21);
     end;
+    local j := getkey();
+    local d := {0, 0};
+    case
+      if j = 8 then d := {1, 0};end;
+      if j = 7 then d := {-1, 0};end;
+      if j = 12 then d := {0, 1};end;
+      if j = 2 then d := {0, -1};end;
+      if j = 30 then touch := cursorPos;break; end;
+    end;
+    if NOT eq(d, {0, 0}) then
+      touch := cursorPos + d;
+    end;
   until (touch(1)>0)and(touch(1)<=xm)and(touch(2)>0)and(touch(2)<=ym);
+  if beginGame then
+    beginGame := 0;
+    beginTime := ticks();
+  end;
   return touch;
+end;
+//CursorMoved
+CursorMoved(p)
+begin
+  if eq(p, cursorPos) then
+    return 0;
+  else
+    DrawCursor(cursorPos, #0h);
+    DrawCursor(p, #FF0000h);
+    cursorPos := p;
+    return 1;
+  end;
 end;
 //DigLand
 DigLand(x, y)
