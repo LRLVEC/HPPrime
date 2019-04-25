@@ -1,0 +1,30 @@
+//------------------global functions
+Init();
+RayAlloctor(x, y);
+GetPlaneT(ray, plane);
+GetTriangleUV(p, n);
+TriangleTest(uv);
+JudgeHitBox(ray, bound);
+JudgeHit(Ray);
+RayTrace(ray);
+
+//------------------global variables
+
+
+//------------------main
+export RayTracing()
+begin
+  Init();
+  freeze;
+end;
+//Init
+Init()
+begin
+  rect_p(G0, #0h);
+end;
+//RayAlloctor
+RayAlloctor(x, y)
+begin
+  
+end;
+

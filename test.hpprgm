@@ -1,0 +1,18 @@
+//global variables
+
+//functions
+ahh(a);
+//main
+export test(a)
+begin
+  return ahh(a);
+end;
+//ahh
+ahh(a)
+begin
+  if a then
+    return a*ahh(a-1);
+  else
+    return 1;
+  end;
+end;
