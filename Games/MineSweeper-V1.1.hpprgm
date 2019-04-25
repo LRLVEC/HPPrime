@@ -1,0 +1,216 @@
+//--------------global functions
+Init();
+DrawBigMap();
+DrawSmallMap();
+SetRoundMineNum(x, y);
+DisplayLand(x, y, color);
+DisplayNum(x, y);
+DisplayAllMines();
+TouchInput();
+DigLand(p);
+//--------------global variables
+mapMode;//0:small[11*15], 1:big[24*32]
+xm, ym, landNum;
+player; //0:human, 1:AI
+mineNum;
+leftNum;
+lands := {};
+dugMine;
+//{
+// 1:buried;[0:blank][1:buried a mine]
+// 2:num;   [number of the mines around]
+// 3:dug;   [0:not dug][1:dug]
+//}
+
+//--------------main
+export MineSweeper()
+begin
+  Init();
+  repeat
+    local t := TouchInput();
+    DigLand(t(1), t(2));
+  until dugMine or NOT leftNum;
+  if leftNum then
+    DisplayAllMines();
+  end;
+  wait(1);
+end;
+//Init
+Init()
+begin
+  mapMode := 0;
+  dugMine := 0;
+  while NOT choose(mapMode,"地图模式",{"小地图","大地图"})do end;
+  mapMode := mapMode - 1;
+  if mapMode = 0 then //small map
+    xm := 15;
+    ym := 11;
+  else                  //big map
+    xm := 32;
+    ym := 24;
+  end;
+  landNum := xm * ym;
+  local flag := 0;
+  repeat
+    flag := input(mineNum, mineNum);
+    flag := flag and(mineNum >= 0)and(mineNum <= landNum);
+  until flag;
+  mineNum := round(mineNum);
+  leftNum := xm*ym - mineNum;
+  local c0,c1;
+  if mapMode = 0 then //small map
+    DrawSmallMap();
+  else                  //big map
+    DrawBigMap();
+  end;
+  lands := {};
+  for c1 from 1 to ym do
+    for c0 from 1 to xm do
+      lands(c1, c0) := {0, 0, 0};
+    end;
+  end;
+  for c0 from 1 to mineNum do
+    local xt, yt;
+    repeat
+      xt := randint(1, xm);
+      yt := randint(1, ym);
+    until
+      NOT lands(yt, xt, 1);
+    lands(yt, xt, 1) := 1;
+    SetRoundMineNum(xt, yt);
+  end;
+end;
+//SetRoundMineNum
+SetRoundMineNum(x, y)
+begin
+  local x0 := max(x - 1, 1), x1 := min(x + 1, xm);
+  local y0 := max(y - 1, 1), y1 := min(y + 1, ym);
+  local c0, c1;
+  local num := 0;
+  for c1 from y0 to y1 do
+    for c0 from x0 to x1 do
+      lands(c1, c0, 2) := lands(c1, c0, 2) + 1;
+    end;
+  end;
+  return num;
+end;
+//DrawSmallMap
+DrawSmallMap()
+begin
+  rect_p(G0, 0, 0, 319, 239, #A0A0A0h);
+  local c0;
+  for c0 from 0 to 16 do
+    line_p(G0, 21 * c0 + 2, 0, 21 * c0 + 2, 239, #0h);
+  end;
+  for c0 from 0 to 11 do
+    line_p(G0, 0, 21 * c0 + 4, 319, 21 * c0 + 4, #0h);
+  end;
+  rect_p(G0, 0, 0, 319, 3, #888888h);
+  rect_p(G0, 0, 236, 319, 239, #888888h);
+  rect_p(G0, 0, 0, 1, 239, #888888h);
+  rect_p(G0, 318, 0, 319, 239, #888888h);
+end;
+//DrawBigMap
+DrawBigMap()
+begin
+  rect_p(G0, 0, 0, 319, 239, #A0A0A0h);
+  local c0;
+  for c0 from 1 to 32 do
+    line_p(G0, 10 * c0 - 1, 0, 10 * c0 - 1, 239, #0h);
+  end;
+  for c0 from 0 to 24 do
+    line_p(G0, 0, 10 * c0 - 1, 319, 10 * c0 - 1, #0h);
+  end;
+end;
+//DisplayLand
+DisplayLand(x, y, color)
+begin
+  ifte(mapMode,
+    rect_p(G0, 10*x - 10, 10*y - 10, 10*x - 2, 10*y - 2, color),
+    rect_p(G0, 21*x - 18, 21*y - 16, 21*x + 1, 21*y + 3, color)
+  );
+end;
+//DisplayNum
+DisplayNum(x, y)
+begin
+  local num := lands(y, x, 2);
+  if num then
+    ifte(mapMode,
+      textout_p(string(num), G0, 10*x -  8, 10*y - 10, 1, #C8C8C8h),
+      textout_p(string(num), G0, 21*x - 13, 21*y - 16, 4, #C8C8C8h)
+    );
+  end;
+end;
+//DisplayAllMines
+DisplayAllMines()
+begin
+  local c0, c1;
+  for c1 from 1 to ym do
+    for c0 from 1 to xm do
+      ifte(lands(c1, c0, 1),
+        DisplayLand(c0, c1, #FF0000h),
+        (DisplayLand(c0, c1, #141414h),DisplayNum(c0, c1))
+      );
+    end;
+  end;
+end;
+//TouchInput
+TouchInput()
+begin
+  local touch := {0, 0};
+  repeat
+    touch := {mouse(0) + 1, mouse(1) + 1};
+    if mapMode then
+      touch := ceiling((touch - {0, 0})/10);
+    else
+      touch := ceiling((touch - {3, 3})/21);
+    end;
+  until (touch(1)>0)and(touch(1)<=xm)and(touch(2)>0)and(touch(2)<=ym);
+  return touch;
+end;
+//DigLand
+DigLand(x, y)
+begin
+  if NOT lands(y, x, 3) then
+    if lands(y, x, 1) then
+      dugMine := 1;
+    else
+      lands(y, x, 3) := 1;
+      leftNum := leftNum - 1;
+      DisplayLand(x, y, #141414h);
+      DisplayNum(x, y);
+      if NOT lands(y, x, 2) then
+        local x0 := max(x - 1, 1), x1 := min(x + 1, xm);
+        local y0 := max(y - 1, 1), y1 := min(y + 1, ym);
+        local c0, c1;
+        for c1 from y0 to y1 do
+          for c0 from x0 to x1 do
+            if NOT(lands(c1, c0, 3)or lands(c1, c0, 1)) then
+              DigLand(c0, c1);
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+end;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
