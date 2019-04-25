@@ -1,0 +1,169 @@
+//----------------variables------------------
+in;
+nn;
+n:={};
+w:={};
+x:={};
+d:={};
+p:=0;
+k:=1;
+q:=0.1;
+TrainingData:={};
+PointType;
+//----------------functions------------------
+init();
+gets();
+sigmoidal(a);
+randomization();
+calc(x,y);
+training();
+judge();
+//----------------main-----------------------
+export NeuralNetworkAlgorithm()
+begin
+  MSGBOX("Press 1 to choose red ones;\n"+
+         "press 2 to choose blue ones;\n"+
+         "then pick some points.\n"+
+         "Press Apps to start training.");
+  wait(0.5);
+  init();
+  while gets() do
+  end;
+  wait(0.5);
+  training();
+  wait(0.5);
+  judge();
+end;
+//----------------init-----------------------
+init()
+begin
+  local c1,c2;
+  rect_p(G0,0);
+  in:=2+1;//input:2+1
+  n:={4,4,2};
+  //layer 1:4+1;
+  //layer 2:4+1;
+  //layer 3(output):2;
+  nn:=3;
+  PointType:=#FF0000h;
+  k:=1;
+  q:=0.1;
+  randomization();
+  x(1,in):=0;//input
+  for c1 from 2 to nn+1 do
+    x(c1,n(c1-1)):=-1;//layer c1-1
+  end;
+  for c1 from 1 to nn do
+    d(c1,n(c1)-1):=0;
+  end;
+end;
+//----------------sigmoidal------------------
+sigmoidal(a)
+begin
+  return 1/(1+e^(-k*a));
+end;
+//----------------gets-----------------------
+gets()
+begin
+  local touch:={};
+  if p>5000 then return 0;end;
+  repeat
+    touch:=mouse;
+    if iskeydown(0) then return 0;end;
+    if iskeydown(42) then
+      PointType:=#FF0000h;
+    end;
+    if iskeydown(43) then
+      PointType:=#FFh;
+    end;
+  until
+    size(touch(1))==5;
+  p:=p+1;
+  TrainingData(p):={touch(1,1)/320,touch(1,2)/240,PointType<#FF0000h};
+  arc_p(G0,touch(1,1),touch(1,2),3,0,2*π,PointType); 
+  wait(0.05);
+  return 1;
+end;
+//----------------randomization--------------
+randomization()
+begin
+  local c1,c2;
+  for c2 from 1 to n(1)-1 do
+    w(1,c2):=random(in,-1,1);
+  end;
+  for c1 from 2 to nn do
+    for c2 from 1 to n(c1)-1 do
+      w(c1,c2):=random(n(c1-1),-1,1);
+    end;
+  end; 
+end;
+//----------------training-------------------
+training()
+begin
+  local c1,c2,c3,c4;
+  local delta:=1;
+  local dx:=0;
+  local s:=1;
+  while delta>0.1 do
+    dx:=0;
+    textout_p(string(s),G0,0,15,0,#FFFFFFh,50,#0h);
+    s:=s+1;
+    for c1 from 1 to p do
+      //-----------------calc x----------------
+      x(1):=TrainingData(c1);
+      x(1,in):=-1;
+      for c2 from 1 to nn do
+        for c3 from 1 to n(c2)-1 do
+          x(c2+1,c3):=sigmoidal(ΣLIST(w(c2,c3)*x(c2)));
+        end;
+      end;
+      //-----------------calc d---------------- 
+      for c3 from 1 to n(nn)-1 do
+        d(nn,c3):=q*(TrainingData(c1,3)-x(nn+1,c3))*k*x(nn+1,c3)*(1-x(nn+1,c3)); 
+      end;
+      for c2 from nn-1 downto 1 do
+        for c3 from 1 to n(c2)-1 do
+          d(c2,c3):=k*Σ(d(c2+1,c4)*w(c2+1,c4,c3)*x(c2,c3)*(1-x(c2,c3)),c4,1,n(c2+1)-1); 
+        end;
+      end;
+      //------------------calc w---------------
+      for c3 from 1 to n(1)-1 do
+        w(1,c3):=w(1,c3)+d(1,c3)*x(1);
+      end;
+      for c2 from 2 to nn do
+        for c3 from 1 to n(c2)-1 do 
+          w(c2,c3):=w(c2,c3)+d(c2,c3)*x(c2);
+        end;
+      end;
+      if dx<(delta:=abs(TrainingData(c1,3)-x(nn+1,1))) then
+        textout_p(string(dx:=delta,0,3),G0,0,0,0,#FFFFFFh,50,0);
+      end;
+    end;
+  end;
+end;
+//----------------calc-----------------------
+calc(a,b)
+begin
+  local c1,c2;
+  x(1):={a,b,-1};
+  for c1 from 1 to nn do
+    for c2 from 1 to n(c1)-1 do
+      x(c1+1,c2):=sigmoidal(ΣLIST(w(c1,c2)*x(c1)));
+    end;
+  end;
+  return x(nn+1,1);
+end;
+//----------------jugde----------------------
+judge()
+begin
+  local touch:={};
+  while 1 do
+    repeat
+      touch:=mouse;
+      if iskeydown(4) then return;end;
+    until
+      size(touch(1))==5;
+    arc_p(G0,touch(1,1),touch(1,2),3,0,2*π,ifte(calc(touch(1,1)/320,touch(1,2)/240)<0.5,#FF0000h,#FFh));  
+  end;
+end;
+
